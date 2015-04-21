@@ -1,0 +1,10 @@
+--- a/drivers/net/vmxnet3/vmxnet3_drv.c 2015-03-18 22:11:52.000000000 +0900
++++ b/drivers/net/vmxnet3/vmxnet3_drv.c 2015-04-29 01:56:46.870817242 +0900
+@@ -151,6 +151,7 @@
+                netdev_info(adapter->netdev, "NIC Link is Up %d Mbps\n",
+                            adapter->link_speed);
+                netif_carrier_on(adapter->netdev);
++               netdev_notify_peers(adapter->netdev);
+
+                if (affectTxQueue) {
+                        for (i = 0; i < adapter->num_tx_queues; i++)

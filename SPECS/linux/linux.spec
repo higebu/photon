@@ -1,7 +1,7 @@
 Summary:	Kernel
 Name:		linux
 Version:	3.19.2
-Release:	1
+Release:	2
 License:	GPLv2
 URL:		http://www.kernel.org/
 Group:		System Environment/Kernel
@@ -9,6 +9,7 @@ Vendor:		VMware, Inc.
 Distribution: Photon
 Source0:	http://www.kernel.org/pub/linux/kernel/v3.x/%{name}-%{version}.tar.xz
 #Source1:	config-%{version}-generic.amd64
+Patch0:         linux-3.19.2-vmxnet3-enable-to-send-garp-packet-after-linkup.patch
 BuildRequires:	bc
 BuildRequires:	kbd
 BuildRequires:	kmod
@@ -31,6 +32,7 @@ The Linux package contains the Linux kernel doc files
 
 %prep
 %setup -q
+%patch0 -p1
 %build
 make mrproper
 cp %{_topdir}/config .config

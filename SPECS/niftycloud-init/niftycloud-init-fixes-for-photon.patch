@@ -1,0 +1,155 @@
+diff -uN a/niftycloud_init b/niftycloud_init
+--- a/niftycloud_init	2013-03-11 11:33:55.000000000 +0000
++++ b/niftycloud_init	2015-04-28 17:16:24.013646213 +0000
+@@ -1,103 +1,76 @@
+ #!/bin/bash
+-VERSION="1"
+ 
+-VMWARE_GUESTD=""
+-if [ -x /usr/sbin/vmware-guestd ]; then
+-    VMWARE_GUESTD="/usr/sbin/vmware-guestd"
+-elif [ -x /usr/sbin/vmtoolsd ]; then
+-    VMWARE_GUESTD="/usr/sbin/vmtoolsd"
++VMTOOLSD=""
++if [ -x /usr/bin/vmtoolsd ]; then
++    VMTOOLSD="/usr/bin/vmtoolsd"
+ else
+     exit 1
+ fi
+ 
+-INIT=$(${VMWARE_GUESTD} --cmd 'info-get guestinfo.init' 2>&1)
++INIT=$(${VMTOOLSD} --cmd 'info-get guestinfo.init' 2>&1)
+ if [ $? -ne 0 ]; then
+-    echo "guestinfo.init undefined!"
+-    ${VMWARE_GUESTD} --cmd 'info-set guestinfo.init_result 9999'
+-    exit 1
++    echo "guestinfo.init undefined."
++    ${VMTOOLSD} --cmd 'info-set guestinfo.init_result 9999'
++    exit 0
+ fi
+ echo "guestinfo.init: $INIT"
+ 
+-HOSTNAME=$(${VMWARE_GUESTD} --cmd 'info-get guestinfo.hostname' 2>&1)
+-if [ $? -ne 0 ]; then
+-    echo "guestinfo.hostname undefined!"
+-fi
+-echo "guestinfo.hostname: $HOSTNAME"
+-
+-SSH_AUTHORIZED_KEY=$(${VMWARE_GUESTD} --cmd 'info-get guestinfo.ssh_authorized_key' 2>&1)
+-if [ $? -ne 0 ]; then
+-    echo "guestinfo.ssh_authorized_key undefined!"
+-    SSH_AUTHORIZED_KEY=""
+-fi
+-echo "guestinfo.ssh_authorized_key: $SSH_AUTHORIZED_KEY"
+-
+-LOG_CLEANUP=$(${VMWARE_GUESTD} --cmd 'info-get guestinfo.log_cleanup' 2>&1)
+-if [ $? -ne 0 ]; then
+-    echo "guestinfo.log_cleanup undefined!"
+-    LOG_CLEANUP="0"
+-fi
+-echo "guestinfo.log_cleanup: $LOG_CLEANUP"
+-
+-USER_DATA=$(${VMWARE_GUESTD} --cmd 'info-get guestinfo.user_data' 2>&1)
+-if [ $? -ne 0 ]; then
+-    echo "guestinfo.user_data undefined!"
+-    USER_DATA=""
+-fi
+-echo "guestinfo.user_data: $USER_DATA"
+-
+-## initialize os configuration.
++## Initialize os configuration.
+ if [ $INIT == "1" ]; then
+-    mkdir -p /root/.ssh && chmod 700 /root/.ssh
+-    echo $?
++    SSH_AUTHORIZED_KEY=$(${VMTOOLSD} --cmd 'info-get guestinfo.ssh_authorized_key' 2>&1)
++    mkdir -p /root/.ssh
++    chmod 700 /root/.ssh
+     echo $SSH_AUTHORIZED_KEY > /root/.ssh/authorized_keys
+-    if [ ${#SSH_AUTHORIZED_KEY} -gt 0 -a -f "/root/.ssh/authorized_keys" -a -s "/root/.ssh/authorized_keys" ]; then
+-        cat /root/.ssh/authorized_keys
+-    else
+-        echo "ERROR : Creating instance is miss, authorized_keys is null."
+-        ${VMWARE_GUESTD} --cmd 'info-set guestinfo.init_result 9999'
+-        exit 1
+-    fi
+-    echo $?
+-    if [ -f /etc/sysconfig/network-scripts/ifcfg-eth2 ]; then
+-        /bin/rm /etc/sysconfig/network-scripts/ifcfg-eth2
+-        echo $?
++
++    LOG_CLEANUP=$(${VMTOOLSD} --cmd 'info-get guestinfo.log_cleanup' 2>&1)
++    if [ $? -ne 0 ]; then
++        echo "guestinfo.log_cleanup undefined."
++        LOG_CLEANUP="0"
+     fi
+-    cd /etc &&  sed -e "/^alias eth2/d" modprobe.conf > modprobe.new  && mv -f modprobe.new modprobe.conf
+-    echo $?
++    echo "guestinfo.log_cleanup: $LOG_CLEANUP"
+     if [ $LOG_CLEANUP == "1" ]; then
+-        /bin/cp -f /dev/null /var/log/btmp && /bin/cp -f /dev/null /var/log/boot.log && /bin/cp -f /dev/null /var/log/lastlog && /bin/cp -f /dev/null /var/log/messages && /bin/cp -f /dev/null /var/log/secure && /bin/cp -f /dev/null /var/log/vmware-tools-guestd && /bin/cp -f /dev/null /var/log/wtmp && /bin/cp -f /dev/null /var/log/maillog && /bin/cp -f /dev/null /var/log/cron && /bin/cp -f /dev/null /var/log/audit/audit.log && export HISTSIZE=0
+-        echo $?
+-        /bin/cp -f /dev/null /var/log/btmp && /bin/rm -f /var/log/btmp.* && /bin/rm -f /var/log/boot.log.* && /bin/rm -f /var/log/lastlog.* && /bin/rm -f /var/log/messages.* && /bin/rm -f /var/log/secure.* && /bin/rm -f /var/log/vmware-tools-guestd.* && /bin/rm -f /var/log/wtmp.* && /bin/rm -f /var/log/maillog.* && /bin/rm -f /var/log/cron.* && /bin/rm -f /var/log/audit/audit.log.*
+-        echo $?
++         /bin/cp -f /dev/null /var/log/btmp
++         /bin/cp -f /dev/null /var/log/lastlog
++         /bin/cp -f /dev/null /var/log/wtmp
++         /bin/rm -f /var/log/btmp.*
++         /bin/rm -f /var/log/lastlog.*
++         /bin/rm -f /var/log/wtmp.*
++         /bin/rm -f /var/log/mk-install-package.sh-*.log
++         export HISTSIZE=0
+     fi
+-    echo $?
+ 
+     chmod 755 /etc/shadow
+     sed -i -e "s/^root:[^:]*:/root:*NIFTYCLOUD*:/g" /etc/shadow
+-    echo $?
+     chmod 400 /etc/shadow
+ 
+-    cd /etc/ssh &&  sed -e "s/^PasswordAuthentication yes/PasswordAuthentication no/" sshd_config > sshd_config.new &&echo "PermitRootLogin without-password" >> sshd_config.new && mv -f sshd_config.new sshd_config
++    sed -i "s/^PasswordAuthentication yes/PasswordAuthentication no/" /etc/ssh/sshd_config
++    sed -i "s/^PermitRootLogin no/PermitRootLogin without-password/" /etc/ssh/sshd_config
+ 
+-    ${VMWARE_GUESTD} --cmd 'info-set guestinfo.init 0'
+-    ${VMWARE_GUESTD} --cmd 'info-set guestinfo.log_cleanup 0'
++    rm -f /etc/ssh/ssh_host_*
++    ssh-keygen -A
++    systemctl restart sshd
++
++    ${VMTOOLSD} --cmd 'info-set guestinfo.init 0'
++    ${VMTOOLSD} --cmd 'info-set guestinfo.log_cleanup 0'
+ fi
+ 
+-USER_DATA_FLAG=$(${VMWARE_GUESTD} --cmd 'info-get guestinfo.set_user_data')
++USER_DATA_FLAG=$(${VMTOOLSD} --cmd 'info-get guestinfo.set_user_data')
++USER_DATA_PATH=/usr/share/niftycloud/user-data
+ if [ "$USER_DATA_FLAG" == "1" ]; then
+-    echo "$USER_DATA" | openssl enc -d -base64 > ~/.niftycloud_user_data
+-    awk 'NR==1{print $1}' ~/.niftycloud_user_data | grep ^\#\!
+-    if [ $? -eq 0 ]; then
+-        tr -d "\r" < ~/.niftycloud_user_data > ~/.niftycloud_user_data1
+-        mv ~/.niftycloud_user_data1 ~/.niftycloud_user_data
+-        chmod 755 ~/.niftycloud_user_data
+-        logger -p user.info "$(~/.niftycloud_user_data 2>&1)"
+-        # logger -p user.info "execute ~/.niftycloud_user_data"
++    TMPFILE=$(mktemp /tmp/XXXXXX-user-data)
++    ${VMTOOLSD} --cmd 'info-get guestinfo.user_data' | openssl enc -d -base64 > "${TMPFILE}"
++    if [ -s "${TMPFILE}" ]; then
++        if [ `head -n1 ${TMPFILE} | grep ^\#\!` -eq 0 ]; then
++            cat ${TMPFILE} | tr -d '\r' > ${USER_DATA_PATH}
++            chmod 755 ${USER_DATA_PATH}
++            ${USER_DATA_PATH}
++        fi
+     fi
+-    ${VMWARE_GUESTD} --cmd 'info-set guestinfo.set_user_data 0'
++    ${VMTOOLSD} --cmd 'info-set guestinfo.set_user_data 0'
+ else
+-    rm -rf ~/.niftycloud_user_data
++    rm -rf ${USER_DATA_PATH}
+ fi
+ 
+-${VMWARE_GUESTD} --cmd 'info-set guestinfo.init_result 1'
+-exit $?
++${VMTOOLSD} --cmd 'info-set guestinfo.init_result 1'
++
++exit 0
