@@ -1,0 +1,10 @@
+[Unit]
+After=vmtoolsd.service
+Requires=vmtoolsd.service
+
+[Service]
+type=oneshot
+ExecStart=/usr/share/niftycloud/niftycloud_init
+
+[Install]
+WantedBy=multi-user.target
